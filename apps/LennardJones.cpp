@@ -41,7 +41,7 @@ int main() {
 
     sf::RenderWindow window{sf::VideoMode{1000, 1000}, "KAK"};
 
-    ps.run(T, dt, [&window](const PartSim& ps) {
+    ps.run(dt, T, [&window](const PartSim& ps, int i) {
             cout << ps.get_time() << endl;
 
             sf::Event event;

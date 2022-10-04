@@ -36,7 +36,7 @@ int main() {
 
     sf::RenderWindow window{sf::VideoMode{1000, 1000}, "GAG"};
 
-    ps.run(1000000000, 500, [&window](const PartSim& ps) {
+    ps.run(500, 1000000000, [&window](const PartSim& ps, int i) {
             sf::Event event;
             while (window.pollEvent(event)) {}
 

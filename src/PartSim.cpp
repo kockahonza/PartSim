@@ -15,8 +15,9 @@ Eigen::Vector3d gravitational_force(const Particle& p1, const Particle& p2) {
 }
 
 
-const std::vector<Particle>& PartSim::run(double T, double dt, std::function<bool(const PartSim&)> iter_f) {
-    while (m_time < T) {
+int PartSim::run(double dt, double T, int max_iter, std::function<bool(const PartSim&, int)> iter_f) {
+    int i{0};
+    while ((m_time < T) && (i < max_iter)) {
         #pragma omp parallel for
         for (Particle& p : m_particles) {
             p.m_force = m_external_force(p);
@@ -42,17 +43,6 @@ const std::vector<Particle>& PartSim::run(double T, double dt, std::function<boo
             }
         }
 
-        // Old, non-parallel version, keeping for benchmarking/checking if it still works
-        /* Eigen::Vector3d inter_particle_force_temp; */
-        /* #pragma omp parallel for default(none) private(inter_particle_force_temp) */
-        /* for (auto p1{m_particles.begin()}; p1 != m_particles.end(); ++p1) { */
-        /*     for (auto p2{p1 + 1}; p2 != m_particles.end(); ++p2) { */
-        /*         inter_particle_force_temp = m_inter_particle_force(*p1, *p2); */
-        /*         (*p1).m_force += inter_particle_force_temp; */
-        /*         (*p2).m_force -= inter_particle_force_temp; */
-        /*     } */
-        /* } */
-
         #pragma omp parallel for
         for (Particle& p : m_particles) {
             p.m_position += dt * p.m_velocity;
@@ -60,10 +50,10 @@ const std::vector<Particle>& PartSim::run(double T, double dt, std::function<boo
         }
 
         m_time += dt;
-        if (!iter_f(*this)) {break;};
+        if (!iter_f(*this, i)) {break;};
     }
 
-    return m_particles;
+    return i;
 };
 
 void PartSim::print_positions() {

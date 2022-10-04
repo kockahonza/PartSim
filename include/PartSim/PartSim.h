@@ -16,6 +16,8 @@ public:
     using inter_particle_force_t = std::function<Eigen::Vector3d(Particle p1, Particle p2)>;
     using external_force_t = std::function<Eigen::Vector3d(Particle p)>;
 
+    using iter_f_t = std::function<bool(const PartSim&, int)>;
+
 private:
     std::vector<Particle> m_particles;
     // Calculate the force exerted by p2 on p1, it must be antisymmetric (aka follow Newtons 3rd)!
@@ -42,7 +44,10 @@ public:
     const double& get_time() const {return m_time;};
 
     // Particle simulation logic methods
-    const std::vector<Particle>& run(double T, double dt, std::function<bool(const PartSim&)> iter_f=[](PartSim) {return true;});
+    int run(double dt, double T, int max_iter=std::numeric_limits<int>::max(),
+            iter_f_t iter_f=[](PartSim, int) {return true;});
+
+    int run(double dt, double T, iter_f_t iter_f) {return run(dt, T, std::numeric_limits<int>::max(), iter_f);};
 
     void testing() {
         for (Particle& p : m_particles) {
