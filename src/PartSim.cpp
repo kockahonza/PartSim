@@ -49,8 +49,9 @@ int PartSim::run(double dt, double T, int max_iter, std::function<bool(const Par
             p.m_velocity += dt * p.m_force / p.m_mass;
         }
 
-        m_time += dt;
         if (!iter_f(*this, i)) {break;};
+        m_time += dt;
+        i += 1;
     }
 
     return i;
