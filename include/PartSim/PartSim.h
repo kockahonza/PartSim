@@ -12,12 +12,14 @@ inline Eigen::Vector3d no_external_force(const Particle&) {return {0, 0, 0};}
 
 
 class PartSim {
+// Types, keep them public so they may be used outside
 public:
     using inter_particle_force_t = std::function<Eigen::Vector3d(Particle p1, Particle p2)>;
     using external_force_t = std::function<Eigen::Vector3d(Particle p)>;
 
     using iter_f_t = std::function<bool(const PartSim&, int)>;
 
+// Internal properties
 private:
     std::vector<Particle> m_particles;
     // Calculate the force exerted by p2 on p1, it must be antisymmetric (aka follow Newtons 3rd)!
@@ -27,6 +29,7 @@ private:
 
     double m_time;
 
+// Public API
 public:
     // Constructors
     PartSim(std::vector<Particle> particles={},
@@ -43,6 +46,8 @@ public:
     const std::vector<Particle>& get_particles() const {return m_particles;};
     const double& get_time() const {return m_time;};
 
+    void print_positions();
+
     // Particle simulation logic methods
     int run(double dt, double T, int max_iter=std::numeric_limits<int>::max(),
             iter_f_t iter_f=[](PartSim, int) {return true;});
@@ -55,5 +60,7 @@ public:
         }
     };
 
-    void print_positions();
+// Private methods
+private:
+    void step(double dt);
 };

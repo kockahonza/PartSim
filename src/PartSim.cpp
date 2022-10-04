@@ -15,9 +15,31 @@ Eigen::Vector3d gravitational_force(const Particle& p1, const Particle& p2) {
 }
 
 
+void PartSim::print_positions() {
+    std::cout << "Printing particle positions from PartSim\n";
+    for (size_t i = 0; i < m_particles.size(); i++) {
+        std::cout << "Particle " << i << " is at (" <<
+            m_particles[i].m_position[0] << ", " <<
+            m_particles[i].m_position[1] << ", " <<
+            m_particles[i].m_position[2] << ")\n";
+    }
+    std::cout << "Printing finished" << std::endl;
+}
+
 int PartSim::run(double dt, double T, int max_iter, std::function<bool(const PartSim&, int)> iter_f) {
     int i{0};
     while ((m_time < T) && (i < max_iter)) {
+        step(dt);
+
+        if (!iter_f(*this, i)) {break;};
+        m_time += dt;
+        i += 1;
+    }
+
+    return i;
+};
+
+void PartSim::step(double dt) {
         #pragma omp parallel for
         for (Particle& p : m_particles) {
             p.m_force = m_external_force(p);
@@ -48,22 +70,4 @@ int PartSim::run(double dt, double T, int max_iter, std::function<bool(const Par
             p.m_position += dt * p.m_velocity;
             p.m_velocity += dt * p.m_force / p.m_mass;
         }
-
-        if (!iter_f(*this, i)) {break;};
-        m_time += dt;
-        i += 1;
-    }
-
-    return i;
-};
-
-void PartSim::print_positions() {
-    std::cout << "Printing particle positions from PartSim\n";
-    for (size_t i = 0; i < m_particles.size(); i++) {
-        std::cout << "Particle " << i << " is at (" <<
-            m_particles[i].m_position[0] << ", " <<
-            m_particles[i].m_position[1] << ", " <<
-            m_particles[i].m_position[2] << ")\n";
-    }
-    std::cout << "Printing finished" << std::endl;
 }
