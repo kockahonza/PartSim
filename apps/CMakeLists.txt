@@ -12,4 +12,7 @@ if(NOT (PARTSIM_GUI STREQUAL "nogui"))
     target_link_libraries(LennardJones sfml-graphics)
 endif()
 
+# find_package(HighFive)
+
 add_executable(LennardJonesFast LennardJonesFast.cpp)
+# target_link_libraries(LennardJonesFast HighFive)
