@@ -14,9 +14,8 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 
 endif()
 
-# set(HIGHFIVE_USE_INSTALL_DEPS YES)
-# list(APPEND CMAKE_PREFIX_PATH "/home/honza/Apps/HighFive/build/install_dir")
-# message(STATUS "${CMAKE_PREFIX_PATH}")
+set(HIGHFIVE_USE_EIGEN ON)
+add_subdirectory(external_libs/HighFive)
 
 add_subdirectory(src)
 
