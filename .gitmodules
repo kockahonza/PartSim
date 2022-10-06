@@ -1,3 +1,6 @@
 [submodule "external_libs/HighFive"]
 	path = external_libs/HighFive
 	url = git@github.com:BlueBrain/HighFive.git
+[submodule "external_libs/libconfig"]
+	path = external_libs/libconfig
+	url = git@github.com:hyperrealm/libconfig.git

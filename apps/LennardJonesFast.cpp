@@ -2,7 +2,9 @@
 #include <iostream>
 
 #include <eigen3/Eigen/Dense>
-/* #include <highfive/H5File.hpp> */
+#include <highfive/H5File.hpp>
+#include <highfive/H5DataSet.hpp>
+#include <libconfig.hh>
 
 #include "PartSim/PartSim.h"
 
@@ -20,6 +22,8 @@ constexpr double dt{0.001};
 constexpr double T{100000000000};
 const int max_iter{static_cast<int>(T / dt)};
 
+const std::string base_filename{"LJF_data.h5"};
+
 Eigen::Vector3d lennard_jones(const Particle& p1, const Particle& p2) {
     const Eigen::Vector3d r12{p1.get_position() - p2.get_position()};
     const double r{r12.norm()};
@@ -27,7 +31,14 @@ Eigen::Vector3d lennard_jones(const Particle& p1, const Particle& p2) {
 }
 
 int main() {
-    using std::vector, std::cout, std::endl;
+    using std::vector, std::cout, std::endl, HighFive::File;
+
+    std::vector<double> d1{1, 23.42, 12};
+    File file(base_filename, File::Overwrite);
+    HighFive::DataSet ds{file.createDataSet("dset1", d1)};
+    ds.createAttribute("heyo", 42);
+
+    return 0;
 
     vector<Particle> particles(N*N);
     for (int i = 0; i < N; i++) {
@@ -36,6 +47,10 @@ int main() {
         }
     }
     PartSim ps{particles, lennard_jones};
+
+    std::vector<Eigen::Vector3d> positions(max_iter);
+    std::vector<Eigen::Vector3d> velocities(max_iter);
+    std::vector<Eigen::Vector3d> forces(max_iter);
 
     ps.run(dt, T, max_iter, [](const PartSim& ps, int i) {
             cout << i << endl;

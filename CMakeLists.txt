@@ -16,6 +16,7 @@ endif()
 
 set(HIGHFIVE_USE_EIGEN ON)
 add_subdirectory(external_libs/HighFive)
+add_subdirectory(external_libs/libconfig)
 
 add_subdirectory(src)
 
