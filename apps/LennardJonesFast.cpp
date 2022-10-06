@@ -1,4 +1,5 @@
 #include <functional>
+#include <fstream>
 #include <iostream>
 
 #include <eigen3/Eigen/Dense>
@@ -7,56 +8,91 @@
 #include <libconfig.hh>
 
 #include "PartSim/PartSim.h"
+#include "PartSim/util.h"
 
 
-constexpr double mass{0.001};
-constexpr int N{50};
+const std::string config_filename{"ex.cfg"};
 
-constexpr double epsilon{0.1};
-constexpr double sigma{50};
-const double sigma12{pow(sigma, 12)};
-const double sigma6{pow(sigma, 6)};
+struct config {
+    int N;
+    double mass;
+    double epsilon;
+    double sigma;
 
-constexpr double initial_spacing{50};
-constexpr double dt{0.001};
-constexpr double T{100000000000};
-const int max_iter{static_cast<int>(T / dt)};
+    double initial_spacing;
 
-const std::string base_filename{"LJF_data.h5"};
+    double dt;
+    double T;
+    int max_iter;
 
-Eigen::Vector3d lennard_jones(const Particle& p1, const Particle& p2) {
-    const Eigen::Vector3d r12{p1.get_position() - p2.get_position()};
-    const double r{r12.norm()};
-    return 24 * epsilon * (2 * (sigma12 / pow(r, 13)) - (sigma6 / pow(r, 7))) * r12;
-}
+    std::string output_filename;
+};
+
 
 int main() {
     using std::vector, std::cout, std::endl, HighFive::File;
 
-    std::vector<double> d1{1, 23.42, 12};
-    File file(base_filename, File::Overwrite);
-    HighFive::DataSet ds{file.createDataSet("dset1", d1)};
-    ds.createAttribute("heyo", 42);
+    // Read the configuration file (the location of which is hard coded)
+    libconfig::Config config_file{};
+    config_file.readFile(config_filename);
+    const config cfg{
+        config_file.lookup("LennardJonesFast.N"),
+        config_file.lookup("LennardJonesFast.mass"),
+        config_file.lookup("LennardJonesFast.epsilon"),
+        config_file.lookup("LennardJonesFast.sigma"),
+        config_file.lookup("LennardJonesFast.initial_spacing"),
+        config_file.lookup("LennardJonesFast.dt"),
+        config_file.lookup("LennardJonesFast.T"),
+        config_file.lookup("LennardJonesFast.max_iter"),
+        config_file.lookup("LennardJonesFast.output_filename")
+    };
 
-    return 0;
+    const int particle_count{cfg.N * cfg.N};
 
-    vector<Particle> particles(N*N);
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            particles[i * N + j] = Particle{mass, {i * initial_spacing, j * initial_spacing, 0}};
+    // Setup the particles and environment
+    vector<Particle> particles(particle_count);
+    for (int i = 0; i < cfg.N; i++) {
+        for (int j = 0; j < cfg.N; j++) {
+            particles[i * cfg.N + j] = Particle{cfg.mass, {i * cfg.initial_spacing, j * cfg.initial_spacing, 0}};
         }
     }
-    PartSim ps{particles, lennard_jones};
+    PartSim ps{particles, LennardJonesForce(cfg.epsilon, cfg.sigma)};
 
-    std::vector<Eigen::Vector3d> positions(max_iter);
-    std::vector<Eigen::Vector3d> velocities(max_iter);
-    std::vector<Eigen::Vector3d> forces(max_iter);
+    // Open the output file now, so that any errors are caught before the simulation
+    File h5_file{cfg.output_filename, File::Overwrite};
 
-    ps.run(dt, T, max_iter, [](const PartSim& ps, int i) {
+    // Setup storage for the data to be collected and saved
+    vector<vector<Eigen::Vector3d>> positions(cfg.max_iter, vector<Eigen::Vector3d>(particle_count));
+    vector<vector<Eigen::Vector3d>> velocities(cfg.max_iter, vector<Eigen::Vector3d>(particle_count));
+    vector<vector<Eigen::Vector3d>> forces(cfg.max_iter, vector<Eigen::Vector3d>(particle_count));
+
+    // Run the simulation
+    ps.run(cfg.dt, cfg.T, cfg.max_iter, [&positions, &velocities, &forces](const PartSim& ps, int i) {
             cout << i << endl;
+            const vector<Particle>& particles{ps.get_particles()};
+            #pragma omp for default(none) shared(positions, velocities, forces)
+            for (size_t j = 0; j < particles.size(); j++) {
+                positions[i][j] = particles[j].get_position();
+                velocities[i][j] = particles[j].get_velocity();
+                forces[i][j] = particles[j].get_force();
+            }
 
             return true;
             });
+
+    // Finally store the data and metadata
+    h5_file.createDataSet("positions", positions);
+    h5_file.createDataSet("velocities", velocities);
+    h5_file.createDataSet("forces", forces);
+
+    h5_file.createAttribute("N", cfg.N);
+    h5_file.createAttribute("mass", cfg.mass);
+    h5_file.createAttribute("epsilon", cfg.epsilon);
+    h5_file.createAttribute("sigma", cfg.sigma);
+    h5_file.createAttribute("initial_spacing", cfg.initial_spacing);
+    h5_file.createAttribute("dt", cfg.dt);
+    h5_file.createAttribute("T", cfg.T);
+    h5_file.createAttribute("max_iter", cfg.max_iter);
 
     return 0;
 }

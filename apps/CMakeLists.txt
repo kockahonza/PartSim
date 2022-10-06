@@ -16,4 +16,4 @@ find_package(HighFive)
 find_package(libconfig)
 
 add_executable(LennardJonesFast LennardJonesFast.cpp)
-target_link_libraries(LennardJonesFast HighFive config)
+target_link_libraries(LennardJonesFast HighFive config++)
