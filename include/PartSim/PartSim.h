@@ -1,3 +1,6 @@
+#ifndef PARTSIM_H
+#define PARTSIM_H
+
 #include <vector>
 #include <functional>
 
@@ -64,3 +67,5 @@ public:
 private:
     void step(double dt);
 };
+
+#endif
