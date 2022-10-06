@@ -9,7 +9,7 @@
 #include "PartSim/util.h"
 
 
-const std::string config_filename{"ex.cfg"};
+const std::string config_filename{"LennardJones.cfg"};
 
 struct config {
     int N;

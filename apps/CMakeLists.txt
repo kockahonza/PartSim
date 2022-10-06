@@ -1,6 +1,9 @@
 # All apps in the project will be using the library
 link_libraries(PartSimLib)
 
+find_package(HighFive)
+find_package(libconfig)
+
 # Build the gui apps (requiring SFML) if PARTSIM_GUI is not "nogui"
 if(NOT (PARTSIM_GUI STREQUAL "nogui"))
     find_package(SFML REQUIRED COMPONENTS window graphics system)
@@ -9,11 +12,8 @@ if(NOT (PARTSIM_GUI STREQUAL "nogui"))
     add_executable(LennardJones LennardJones.cpp)
 
     target_link_libraries(TwoBodyGravity sfml-graphics)
-    target_link_libraries(LennardJones sfml-graphics)
+    target_link_libraries(LennardJones sfml-graphics config++)
 endif()
-
-find_package(HighFive)
-find_package(libconfig)
 
 add_executable(LennardJonesFast LennardJonesFast.cpp)
 target_link_libraries(LennardJonesFast HighFive config++)
