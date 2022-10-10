@@ -1,9 +1,6 @@
 # All apps in the project will be using the library
 link_libraries(PartSimLib)
 
-find_package(HighFive)
-find_package(libconfig)
-
 # Build the gui apps (requiring SFML) if PARTSIM_GUI is not "nogui"
 if(NOT (PARTSIM_GUI STREQUAL "nogui"))
     find_package(SFML REQUIRED COMPONENTS window graphics system)
