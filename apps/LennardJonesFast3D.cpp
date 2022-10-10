@@ -1,5 +1,5 @@
-#include <functional>
 #include <iostream>
+#include <random>
 
 #include <eigen3/Eigen/Dense>
 #include <highfive/H5File.hpp>
@@ -18,6 +18,7 @@ struct config {
     double sigma;
 
     double initial_spacing;
+    double random_offset_max;
 
     double dt;
     double T;
@@ -29,7 +30,7 @@ struct config {
 
 
 int main() {
-    using std::vector, std::cout, std::endl, HighFive::File;
+    using std::cout, std::endl, std::vector, HighFive::File, Eigen::Vector3d;
 
     // Read the configuration file (the location of which is hard coded)
     libconfig::Config config_file{};
@@ -40,6 +41,7 @@ int main() {
         config_file.lookup("LennardJonesFast.epsilon"),
         config_file.lookup("LennardJonesFast.sigma"),
         config_file.lookup("LennardJonesFast.initial_spacing"),
+        config_file.lookup("LennardJonesFast.random_offset_max"),
         config_file.lookup("LennardJonesFast.dt"),
         config_file.lookup("LennardJonesFast.T"),
         config_file.lookup("LennardJonesFast.max_iter"),
@@ -50,10 +52,15 @@ int main() {
     const int particle_count{cfg.N * cfg.N};
 
     // Setup the particles and environment
+    std::default_random_engine re{};
+    std::uniform_real_distribution<double> ud{0, cfg.random_offset_max};
     vector<Particle> particles(particle_count);
     for (int i = 0; i < cfg.N; i++) {
         for (int j = 0; j < cfg.N; j++) {
-            particles[i * cfg.N + j] = Particle{cfg.mass, {i * cfg.initial_spacing, j * cfg.initial_spacing, 0}};
+            for (int k = 0; k < cfg.N; k++) {
+                particles[i * cfg.N + j] = Particle{cfg.mass, {i * cfg.initial_spacing + ud(re),
+                    j * cfg.initial_spacing + ud(re), k * cfg.initial_spacing + ud(re)}};
+            }
         }
     }
     PartSim ps{particles, LennardJonesForce(cfg.epsilon, cfg.sigma)};
@@ -62,9 +69,9 @@ int main() {
     File h5_file{cfg.output_filename, File::Overwrite};
 
     // Setup storage for the data to be collected and saved
-    vector<vector<Eigen::Vector3d>> positions(cfg.max_iter / cfg.save_every, vector<Eigen::Vector3d>(particle_count));
-    vector<vector<Eigen::Vector3d>> velocities(cfg.max_iter / cfg.save_every, vector<Eigen::Vector3d>(particle_count));
-    vector<vector<Eigen::Vector3d>> forces(cfg.max_iter / cfg.save_every, vector<Eigen::Vector3d>(particle_count));
+    vector<vector<Vector3d>> positions(cfg.max_iter / cfg.save_every, vector<Vector3d>(particle_count));
+    vector<vector<Vector3d>> velocities(cfg.max_iter / cfg.save_every, vector<Vector3d>(particle_count));
+    vector<vector<Vector3d>> forces(cfg.max_iter / cfg.save_every, vector<Vector3d>(particle_count));
 
     // Run the simulation
     ps.run(cfg.dt, cfg.T, cfg.max_iter, [&cfg, &positions, &velocities, &forces](const PartSim& ps, int i) {
@@ -89,9 +96,9 @@ int main() {
     h5_file.createDataSet("forces", forces);
 
     // Also collect the final state
-    vector<Eigen::Vector3d> final_positions(particle_count);
-    vector<Eigen::Vector3d> final_velocities(particle_count);
-    vector<Eigen::Vector3d> final_forces(particle_count);
+    vector<Vector3d> final_positions(particle_count);
+    vector<Vector3d> final_velocities(particle_count);
+    vector<Vector3d> final_forces(particle_count);
 
     const vector<Particle>& final_particles{ps.get_particles()};
     cout << particle_count << "bb" << particles.size();
@@ -110,6 +117,7 @@ int main() {
     h5_file.createAttribute("epsilon", cfg.epsilon);
     h5_file.createAttribute("sigma", cfg.sigma);
     h5_file.createAttribute("initial_spacing", cfg.initial_spacing);
+    h5_file.createAttribute("random_offset_max", cfg.random_offset_max);
     h5_file.createAttribute("dt", cfg.dt);
     h5_file.createAttribute("T", cfg.T);
     h5_file.createAttribute("save_every", cfg.save_every);
