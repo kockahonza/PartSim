@@ -2,6 +2,9 @@
 #
 #SBATCH --job-name=LennardJonesFast
 #
+# Use the long nodes
+#SBATCH -p long
+#
 # Number of cores
 #SBATCH -c 64
 #
