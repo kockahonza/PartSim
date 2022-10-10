@@ -49,7 +49,7 @@ int main() {
         config_file.lookup("LennardJonesFast.output_filename")
     };
 
-    const int particle_count{cfg.N * cfg.N};
+    const int particle_count{cfg.N * cfg.N * cfg.N};
 
     // Setup the particles and environment
     std::default_random_engine re{};
@@ -58,7 +58,7 @@ int main() {
     for (int i = 0; i < cfg.N; i++) {
         for (int j = 0; j < cfg.N; j++) {
             for (int k = 0; k < cfg.N; k++) {
-                particles[i * cfg.N + j] = Particle{cfg.mass, {i * cfg.initial_spacing + ud(re),
+                particles[i * cfg.N * cfg.N + j * cfg.N + k] = Particle{cfg.mass, {i * cfg.initial_spacing + ud(re),
                     j * cfg.initial_spacing + ud(re), k * cfg.initial_spacing + ud(re)}};
             }
         }
@@ -101,7 +101,6 @@ int main() {
     vector<Vector3d> final_forces(particle_count);
 
     const vector<Particle>& final_particles{ps.get_particles()};
-    cout << particle_count << "bb" << particles.size();
     #pragma omp for default(none) shared(positions, velocities, forces)
     for (size_t j = 0; j < particles.size(); j++) {
         final_positions[j] = final_particles[j].get_position();
