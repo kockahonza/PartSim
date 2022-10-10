@@ -17,3 +17,6 @@ endif()
 
 add_executable(LennardJonesFast LennardJonesFast.cpp)
 target_link_libraries(LennardJonesFast HighFive config++)
+
+add_executable(LennardJonesFast3D LennardJonesFast3D.cpp)
+target_link_libraries(LennardJonesFast3D HighFive config++)
