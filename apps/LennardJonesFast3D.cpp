@@ -66,7 +66,8 @@ int main() {
     PartSim ps{particles, LennardJonesForce(cfg.epsilon, cfg.sigma)};
 
     // Open the output file and write metadata
-    HighFive::File h5_file{cfg.output_filename, HighFive::File::Overwrite};
+    H5Saver h5saver{cfg.output_filename, cfg.max_iter / cfg.save_every, particle_count};
+    HighFive::File h5_file{h5saver.get_file()};
 
     h5_file.createAttribute("N", cfg.N);
     h5_file.createAttribute("mass", cfg.mass);
@@ -79,63 +80,18 @@ int main() {
     h5_file.createAttribute("save_every", cfg.save_every);
     h5_file.createAttribute("max_iter", cfg.max_iter);
 
-    // Setup storage for the data to be collected and saved, the extra 1 last dimension is due to the way HighFive treats Eigen matrices
-    HighFive::DataSpace main_storage_dataspace(cfg.max_iter / cfg.save_every, particle_count, 3, 1);
-    HighFive::DataSet positions_ds{h5_file.createDataSet<double>("positions", main_storage_dataspace)};
-    HighFive::DataSet velocities_ds{h5_file.createDataSet<double>("velocities", main_storage_dataspace)};
-    HighFive::DataSet forces_ds{h5_file.createDataSet<double>("forces", main_storage_dataspace)};
-    HighFive::DataSet time_ds{h5_file.createDataSet<double>("times", HighFive::DataSpace(cfg.max_iter / cfg.save_every))};
-
     // Run the simulation
-    ps.run(cfg.dt, cfg.T, cfg.max_iter, [&cfg, &particle_count, &positions_ds, &velocities_ds, &forces_ds, &time_ds](const PartSim& ps, int i) {
+    ps.run(cfg.dt, cfg.T, cfg.max_iter, [&h5saver, &cfg](const PartSim& ps, int i) {
             if (i % cfg.save_every == 0) {
                 cout << i << endl;
-
-                const vector<Particle>& particles{ps.get_particles()};
-
-                // Collect the newly calculated data
-                vector<vector<Vector3d>> new_positions{1, vector<Vector3d>(particle_count)};
-                vector<vector<Vector3d>> new_velocities{1, vector<Vector3d>(particle_count)};
-                vector<vector<Vector3d>> new_forces{1, vector<Vector3d>(particle_count)};
-                #pragma omp for
-                for (size_t j = 0; j < particle_count; j++) {
-                    new_positions[0][j] = particles[j].get_position();
-                    new_velocities[0][j] = particles[j].get_velocity();
-                    new_forces[0][j] = particles[j].get_force();
-                }
-
-                // And write it to the right place in the hdf5 file
-                size_t k{static_cast<size_t>(i / cfg.save_every)};
-                HighFive::Selection positions_selection{positions_ds.select({k, 0, 0, 0}, {1, 125, 3, 1})};
-                HighFive::Selection velocities_selection{velocities_ds.select({k, 0, 0, 0}, {1, 125, 3, 1})};
-                HighFive::Selection forces_selection{forces_ds.select({k, 0, 0, 0}, {1, 125, 3, 1})};
-                positions_selection.write(new_positions);
-                velocities_selection.write(new_velocities);
-                forces_selection.write(new_forces);
-
-                // Don't forget time
-                time_ds.select({k}, {1}).write(vector<double>{ps.get_time()});
+                return h5saver.safe_append_row(ps);
             }
 
             return true;
             });
 
     // Also collect the final state
-    vector<Vector3d> final_positions(particle_count);
-    vector<Vector3d> final_velocities(particle_count);
-    vector<Vector3d> final_forces(particle_count);
-
-    const vector<Particle>& final_particles{ps.get_particles()};
-    #pragma omp for default(none) shared(positions, velocities, forces)
-    for (size_t j = 0; j < particle_count; j++) {
-        final_positions[j] = final_particles[j].get_position();
-        final_velocities[j] = final_particles[j].get_velocity();
-        final_forces[j] = final_particles[j].get_force();
-    }
-    h5_file.createDataSet("final_positions", final_positions);
-    h5_file.createDataSet("final_velocities", final_velocities);
-    h5_file.createDataSet("final_forces", final_forces);
-    h5_file.createAttribute("final_time", ps.get_time());
+    h5saver.save_extra("final", ps);
 
     return 0;
 }
