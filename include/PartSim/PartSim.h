@@ -14,13 +14,15 @@ Eigen::Vector3d gravitational_force(const Particle& p1, const Particle& p2);
 inline Eigen::Vector3d no_external_force(const Particle&) {return {0, 0, 0};}
 
 
-class PartSim {
+class PartSim final {
 // Types, keep them public so they may be used outside
 public:
     using inter_particle_force_t = std::function<Eigen::Vector3d(Particle p1, Particle p2)>;
     using external_force_t = std::function<Eigen::Vector3d(Particle p)>;
 
     using iter_f_t = std::function<bool(const PartSim&, int)>;
+
+    static const iter_f_t default_iter_f;
 
 // Internal properties
 private:
@@ -52,15 +54,14 @@ public:
     void print_positions();
 
     // Particle simulation logic methods
-    int run(double dt, double T, int max_iter=std::numeric_limits<int>::max(),
-            iter_f_t iter_f=[](PartSim, int) {return true;});
+    int run(double dt, double T, int max_iter, iter_f_t iter_f=default_iter_f);
 
-    int run(double dt, double T, iter_f_t iter_f) {return run(dt, T, std::numeric_limits<int>::max(), iter_f);};
+    int run(double dt, double T, iter_f_t iter_f=default_iter_f) {
+        return run(dt, T, std::numeric_limits<int>::max(), iter_f);
+    };
 
-    void testing() {
-        for (Particle& p : m_particles) {
-            p.m_position = {0, 0, 0};
-        }
+    int run(double dt, int max_iter, iter_f_t iter_f=default_iter_f) {
+        return run(dt, std::numeric_limits<double>::max(), max_iter, iter_f);
     };
 
 // Private methods

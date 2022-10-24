@@ -28,9 +28,6 @@ public:
     const Eigen::Vector3d& get_force() const {return m_force;}
     const double& get_mass() const {return m_mass;}
 
-    /* void zero_velocity() {m_velocity.zeros();} */
-    /* void zero_force() {m_force.zeros();} */
-
     friend class PartSim;
 };
 
