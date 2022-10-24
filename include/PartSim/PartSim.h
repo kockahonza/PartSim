@@ -10,15 +10,20 @@
 
 
 // Default force functions for PartSim
-Eigen::Vector3d gravitational_force(const Particle& p1, const Particle& p2);
+constexpr double G{6.6743e-11}; //m^3 kg^-1 s^-2
+inline Eigen::Vector3d gravitational_force(const Particle& p1, const Particle& p2) {
+    Eigen::Vector3d r{p2.get_position() - p1.get_position()};
+    return G * p1.get_mass() * p2.get_mass() * r / r.dot(r);
+}
+
 inline Eigen::Vector3d no_external_force(const Particle&) {return {0, 0, 0};}
 
 
 class PartSim final {
 // Types, keep them public so they may be used outside
 public:
-    using inter_particle_force_t = std::function<Eigen::Vector3d(Particle p1, Particle p2)>;
-    using external_force_t = std::function<Eigen::Vector3d(Particle p)>;
+    using inter_particle_force_t = std::function<Eigen::Vector3d(Particle& p1, Particle& p2)>;
+    using external_force_t = std::function<Eigen::Vector3d(Particle& p)>;
 
     using iter_f_t = std::function<bool(const PartSim&, int)>;
 

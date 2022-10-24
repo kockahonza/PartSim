@@ -10,12 +10,6 @@
 
 const PartSim::iter_f_t PartSim::default_iter_f{[](const PartSim&, int) {return true;}};
 
-constexpr double G{6.6743e-11}; //m^3 kg^-1 s^-2
-Eigen::Vector3d gravitational_force(const Particle& p1, const Particle& p2) {
-    Eigen::Vector3d r{p2.get_position() - p1.get_position()};
-    return G * p1.get_mass() * p2.get_mass() * r / r.dot(r);
-}
-
 void PartSim::print_positions() {
     std::cout << "Printing particle positions from PartSim\n";
     for (size_t i = 0; i < m_particles.size(); i++) {

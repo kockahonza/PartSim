@@ -31,4 +31,21 @@ public:
     friend class PartSim;
 };
 
+
+template<typename T>
+class LabeledParticle : public Particle {
+private:
+    T m_label;
+
+public:
+    LabeledParticle(T label, double mass=1, Eigen::Vector3d position={0, 0, 0}, Eigen::Vector3d velocity={0, 0, 0}, Eigen::Vector3d force={0, 0, 0}) :
+        Particle(mass, position, velocity, force), m_label{label} {}
+
+    const T& getLabel() const {return m_label;}
+
+    const T& setLabel(T new_label) {return m_label = new_label;}
+
+};
+
+
 #endif
