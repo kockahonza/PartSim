@@ -37,7 +37,7 @@ int PartSim::run(double dt, double T, int max_iter, iter_f_t iter_f) {
 void PartSim::step(double dt) {
         #pragma omp parallel for
         for (Particle& p : m_particles) {
-            p.m_force = m_external_force(p);
+            p.m_force = m_external_force(p, m_time);
         }
 
         Eigen::Vector3d inter_particle_force_temp;
