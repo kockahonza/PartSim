@@ -8,11 +8,10 @@
 #include "PartSim/PartSim.h"
 #include "PartSim/util.h"
 
-
 const std::string config_filename{"PenTrap.cfg"};
 
 struct config {
-    int N;
+    int mass;
 
     double dt;
     double T;
@@ -22,7 +21,6 @@ struct config {
     std::string output_filename;
 };
 
-
 int main() {
     using std::cout, std::endl, std::vector, Eigen::Vector3d;
 
@@ -30,35 +28,33 @@ int main() {
     libconfig::Config config_file{};
     config_file.readFile(config_filename);
     const config cfg{
-        config_file.lookup("LennardJonesFast.N"),
-        config_file.lookup("LennardJonesFast.dt"),
-        config_file.lookup("LennardJonesFast.T"),
-        config_file.lookup("LennardJonesFast.max_iter"),
-        config_file.lookup("LennardJonesFast.save_every"),
-        config_file.lookup("LennardJonesFast.output_filename")
-    };
+        config_file.lookup("LennardJonesFast.mass"),       config_file.lookup("LennardJonesFast.dt"),
+        config_file.lookup("LennardJonesFast.T"),          config_file.lookup("LennardJonesFast.max_iter"),
+        config_file.lookup("LennardJonesFast.save_every"), config_file.lookup("LennardJonesFast.output_filename")};
 
-    PartSim ps{{}};
+    PartSim ps{{cfg.mass}, no_interparticle_force, [](const Particle &p, double time) {
+                   return Eigen::Vector3d{0, 0, 0};
+               }};
 
     // Open the output file and write metadata
-    H5Saver h5saver{cfg.output_filename, cfg.max_iter / cfg.save_every, cfg.N};
+    H5Saver h5saver{cfg.output_filename, cfg.max_iter / cfg.save_every, 1};
     HighFive::File h5_file{h5saver.get_file()};
 
-    h5_file.createAttribute("N", cfg.N);
+    h5_file.createAttribute("mass", cfg.mass);
     h5_file.createAttribute("dt", cfg.dt);
     h5_file.createAttribute("T", cfg.T);
     h5_file.createAttribute("save_every", cfg.save_every);
     h5_file.createAttribute("max_iter", cfg.max_iter);
 
     // Run the simulation
-    ps.run(cfg.dt, cfg.T, cfg.max_iter, [&h5saver, &cfg](const PartSim& ps, int i) {
-            if (i % cfg.save_every == 0) {
-                cout << i << endl;
-                return h5saver.safe_append_row(ps);
-            }
+    ps.run(cfg.dt, cfg.T, cfg.max_iter, [&h5saver, &cfg](const PartSim &ps, int i) {
+        if (i % cfg.save_every == 0) {
+            cout << i << endl;
+            return h5saver.safe_append_row(ps);
+        }
 
-            return true;
-            });
+        return true;
+    });
 
     // Also collect the final state
     h5saver.save_extra("final", ps);

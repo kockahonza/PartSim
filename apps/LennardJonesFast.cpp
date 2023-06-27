@@ -8,7 +8,6 @@
 #include "PartSim/PartSim.h"
 #include "PartSim/util.h"
 
-
 const std::string config_filename{"LennardJones.cfg"};
 
 struct config {
@@ -27,25 +26,22 @@ struct config {
     std::string output_filename;
 };
 
-
 int main() {
     using std::vector, std::cout, std::endl, HighFive::File;
 
     // Read the configuration file (the location of which is hard coded)
     libconfig::Config config_file{};
     config_file.readFile(config_filename);
-    const config cfg{
-        config_file.lookup("LennardJonesFast.N"),
-        config_file.lookup("LennardJonesFast.mass"),
-        config_file.lookup("LennardJonesFast.epsilon"),
-        config_file.lookup("LennardJonesFast.sigma"),
-        config_file.lookup("LennardJonesFast.initial_spacing"),
-        config_file.lookup("LennardJonesFast.dt"),
-        config_file.lookup("LennardJonesFast.T"),
-        config_file.lookup("LennardJonesFast.max_iter"),
-        config_file.lookup("LennardJonesFast.save_every"),
-        config_file.lookup("LennardJonesFast.output_filename")
-    };
+    const config cfg{config_file.lookup("LennardJonesFast.N"),
+                     config_file.lookup("LennardJonesFast.mass"),
+                     config_file.lookup("LennardJonesFast.epsilon"),
+                     config_file.lookup("LennardJonesFast.sigma"),
+                     config_file.lookup("LennardJonesFast.initial_spacing"),
+                     config_file.lookup("LennardJonesFast.dt"),
+                     config_file.lookup("LennardJonesFast.T"),
+                     config_file.lookup("LennardJonesFast.max_iter"),
+                     config_file.lookup("LennardJonesFast.save_every"),
+                     config_file.lookup("LennardJonesFast.output_filename")};
 
     const int particle_count{cfg.N * cfg.N};
 
@@ -67,21 +63,21 @@ int main() {
     vector<vector<Eigen::Vector3d>> forces(cfg.max_iter / cfg.save_every, vector<Eigen::Vector3d>(particle_count));
 
     // Run the simulation
-    ps.run(cfg.dt, cfg.T, cfg.max_iter, [&cfg, &positions, &velocities, &forces](const PartSim& ps, int i) {
-            if (i % cfg.save_every == 0) {
-                cout << i << endl;
-                int k{i / cfg.save_every};
-                const vector<Particle>& particles{ps.get_particles()};
-                #pragma omp for default(none) shared(positions, velocities, forces)
-                for (size_t j = 0; j < particles.size(); j++) {
-                    positions[k][j] = particles[j].get_position();
-                    velocities[k][j] = particles[j].get_velocity();
-                    forces[k][j] = particles[j].get_force();
-                }
+    ps.run(cfg.dt, cfg.T, cfg.max_iter, [&cfg, &positions, &velocities, &forces](const PartSim &ps, int i) {
+        if (i % cfg.save_every == 0) {
+            cout << i << endl;
+            int k{i / cfg.save_every};
+            const vector<Particle> &particles{ps.get_particles()};
+#pragma omp for default(none) shared(positions, velocities, forces)
+            for (size_t j = 0; j < particles.size(); j++) {
+                positions[k][j] = particles[j].get_position();
+                velocities[k][j] = particles[j].get_velocity();
+                forces[k][j] = particles[j].get_force();
             }
+        }
 
-            return true;
-            });
+        return true;
+    });
 
     // Finally store the data and metadata
     h5_file.createDataSet("positions", positions);
@@ -93,9 +89,9 @@ int main() {
     vector<Eigen::Vector3d> final_velocities(particle_count);
     vector<Eigen::Vector3d> final_forces(particle_count);
 
-    const vector<Particle>& final_particles{ps.get_particles()};
+    const vector<Particle> &final_particles{ps.get_particles()};
     cout << particle_count << "bb" << particles.size();
-    #pragma omp for default(none) shared(positions, velocities, forces)
+#pragma omp for default(none) shared(positions, velocities, forces)
     for (size_t j = 0; j < particles.size(); j++) {
         final_positions[j] = final_particles[j].get_position();
         final_velocities[j] = final_particles[j].get_velocity();
